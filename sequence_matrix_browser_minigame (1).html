@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sequence Matrix Minigame</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      background: #0b1020;
+      font-family: system-ui, sans-serif;
+      color: #d0f7ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .game {
+      background: #101a2f;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      padding: 24px 28px 32px;
+      width: 520px;
+      max-width: 95vw;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #4dfcff;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      font-size: 14px;
+      color: #8fdfe5;
+    }
+
+    .bar {
+      height: 6px;
+      background: #1b2c4a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #35ff7a, #4dfcff);
+      transition: width 0.1s linear;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      border: 2px solid #243b5e;
+      border-radius: 8px;
+      padding: 14px 0;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #a6cfe0;
+      background: #0d1629;
+      user-select: none;
+    }
+
+    .cell.active {
+      background: #1b3a70;
+      border-color: #4dfcff;
+      color: #4dfcff;
+      box-shadow: 0 0 12px rgba(77,252,255,0.6);
+    }
+
+    .cell.correct {
+      background: #143d2b;
+      border-color: #35ff7a;
+      color: #35ff7a;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    button {
+      background: #1b3a70;
+      color: #4dfcff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2450a0;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #7fbac4;
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="header">
+      <div class="title">SEQUENCE MATRIX</div>
+      <div class="stats">
+        <div>Time: <span id="time">10.0</span>s</div>
+        <div>Round: <span id="round">1</span></div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <div class="bar-fill" id="barFill"></div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="footer">
+      <div class="hint">Type the highlighted letters in order</div>
+      <button id="restart">Restart</button>
+    </div>
+  </div>
+
+  <script>
+    const gridEl = document.getElementById("grid");
+    const timeEl = document.getElementById("time");
+    const roundEl = document.getElementById("round");
+    const barFill = document.getElementById("barFill");
+    const restartBtn = document.getElementById("restart");
+
+    const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    let grid = [];
+    let currentIndex = 0;
+    let timeLeft = 10;
+    let maxTime = 10;
+    let round = 1;
+    let timer = null;
+
+    function randomLetter() {
+      return LETTERS[Math.floor(Math.random() * LETTERS.length)];
+    }
+
+    function buildGrid() {
+      grid = [];
+      gridEl.innerHTML = "";
+      for (let i = 0; i < 16; i++) {
+        const letter = randomLetter();
+        grid.push(letter);
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.textContent = letter;
+        if (i === 0) cell.classList.add("active");
+        gridEl.appendChild(cell);
+      }
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      timeLeft = maxTime;
+      updateTime();
+
+      timer = setInterval(() => {
+        timeLeft -= 0.1;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          updateTime();
+          gameOver();
+        } else {
+          updateTime();
+        }
+      }, 100);
+    }
+
+    function updateTime() {
+      timeEl.textContent = timeLeft.toFixed(1);
+      barFill.style.width = `${(timeLeft / maxTime) * 100}%`;
+    }
+
+    function startRound() {
+      currentIndex = 0;
+      roundEl.textContent = round;
+      buildGrid();
+      startTimer();
+    }
+
+    function gameOver() {
+      clearInterval(timer);
+      alert(`Access Denied! You reached round ${round}.`);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (timeLeft <= 0) return;
+
+      const key = e.key.toUpperCase();
+      const cells = document.querySelectorAll(".cell");
+      const targetLetter = grid[currentIndex];
+
+      if (key === targetLetter) {
+        cells[currentIndex].classList.remove("active");
+        cells[currentIndex].classList.add("correct");
+        currentIndex++;
+
+        if (currentIndex < cells.length) {
+          cells[currentIndex].classList.add("active");
+        } else {
+          clearInterval(timer);
+          round++;
+          maxTime = Math.max(5, maxTime - 0.5);
+          setTimeout(startRound, 800);
+        }
+      } else {
+        gameOver();
+      }
+    });
+
+    restartBtn.addEventListener("click", () => {
+      round = 1;
+      maxTime = 10;
+      startRound();
+    });
+
+    startRound();
+  </script>
+</body>
+</html>
